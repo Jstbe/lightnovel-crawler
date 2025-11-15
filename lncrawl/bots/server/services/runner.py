@@ -171,7 +171,6 @@ def microtask(job_id: str, signal=Event()) -> None:
                     break
                 if job.progress > round(app.progress):
                     logger.info('Failed to fetch some content')
-                    done = True
                     break
                 if cur_time - last_report > 5:
                     job.progress = round(app.progress)
