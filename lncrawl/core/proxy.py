@@ -34,17 +34,16 @@ def load_proxies(proxy_file: str):
         address = line.strip()
         if not address:
             continue
-        if "://" in address:
-            scheme, address = line.split("://")
-            schemes = [scheme]
-        else:
-            schemes = ["http", "https"]
 
-        for scheme in schemes:
-            __proxy_list.setdefault(scheme, [])
-            url = scheme + "://" + address
-            __proxy_list[scheme].append(url)
-            __is_private_proxy[url] = True
+        if "://" not in address:
+            address = "http://" + address
+
+        __proxy_list.setdefault("http", [])
+        __proxy_list["http"].append(address)
+        __is_private_proxy[address] = True
+
+        __proxy_list.setdefault("https", [])
+        __proxy_list["https"].append(address)
 
 
 def get_a_proxy(scheme: str = "http", timeout: float = 0):
@@ -57,7 +56,7 @@ def get_a_proxy(scheme: str = "http", timeout: float = 0):
             url
             for url in proxy_list
             if __proxy_visited_at[url] + __proxy_ttl > time.time()
-            and __proxy_use_count.get(url, 0) < __max_use_per_proxy
+               and __proxy_use_count.get(url, 0) < __max_use_per_proxy
         ]
         __proxy_list[scheme] = proxy_list
 
