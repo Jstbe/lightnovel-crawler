@@ -1,4 +1,5 @@
 import logging
+import os
 
 from sqlmodel import Session, SQLModel, create_engine
 
@@ -9,9 +10,10 @@ logger = logging.getLogger(__name__)
 
 class DB:
     def __init__(self, ctx: ServerContext) -> None:
+        sql_echo_flag = os.environ.get('SQLALCHEMY_ECHO', 'false').lower() in ('true', '1')
         self.engine = create_engine(
             ctx.config.server.database_url,
-            echo=logger.isEnabledFor(logging.DEBUG),
+            echo=sql_echo_flag,
         )
 
     def close(self):
