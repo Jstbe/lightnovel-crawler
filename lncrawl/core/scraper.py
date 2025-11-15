@@ -177,6 +177,8 @@ class Scraper(TaskManager, SoupMaker):
             f"[{method.upper()}] {url}\n"
             + "\n".join([f"    {k} = {v}" for k, v in kwargs.items()])
         )
+
+        logger.info(f"Making {method.upper()} request to {url}")
         return _do_request()
 
     # ------------------------------------------------------------------------- #

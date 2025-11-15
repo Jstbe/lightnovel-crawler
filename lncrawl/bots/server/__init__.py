@@ -22,6 +22,7 @@ class ServerBot:
                 log_level=logger.level,
                 port=args.server_port or 8080,
                 host=args.server_host or '0.0.0.0',
+                access_log=logger.isEnabledFor(logging.DEBUG),
             )
         else:
             from .app import app
@@ -30,4 +31,5 @@ class ServerBot:
                 log_level=logger.level,
                 port=args.server_port or 8080,
                 host=args.server_host or '0.0.0.0',
+                access_log=logger.isEnabledFor(logging.DEBUG),
             )

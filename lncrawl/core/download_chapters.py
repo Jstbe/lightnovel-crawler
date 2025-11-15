@@ -50,6 +50,7 @@ def _save_chapter(file_name: Path, chapter: Chapter):
     file_name.parent.mkdir(parents=True, exist_ok=True)
     with file_name.open("w", encoding="utf-8") as fp:
         json.dump(chapter, fp, ensure_ascii=False)
+    logger.info(f"Saved chapter {chapter.id}: {chapter.title} to {file_name}")
 
 
 def restore_chapter_body(app):
