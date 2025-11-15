@@ -38,8 +38,8 @@ def configure_logging():
                 "datefmt": "%Y-%m-%d %H:%M:%S",
             },
             "console": {
-                "format": f"{Fore.CYAN}%(asctime)s {Fore.RED}[%(levelname)s] {Fore.YELLOW}(%(name)s)\n{Fore.WHITE}%(message)s{Fore.RESET}",
-                "datefmt": "%H:%M:%S",
+                "format": f"{Fore.CYAN}%(asctime)s {Fore.RED}[%(levelname)s] {Fore.YELLOW}(%(name)s) -> {Fore.WHITE}%(message)s{Fore.RESET}",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
             },
         },
         "handlers": {
