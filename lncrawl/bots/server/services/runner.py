@@ -163,12 +163,8 @@ def microtask(job_id: str, signal=Event()) -> None:
 
             done = False
             last_report = 0.0
-            start_time = time.time()
-            timeout = SLOT_TIMEOUT_IN_SECOND[user.tier]
             for _ in app.start_download(signal):
                 cur_time = time.time()
-                if cur_time - start_time > timeout:
-                    break
                 if job.progress > round(app.progress):
                     logger.info('Failed to fetch some content')
                     break
