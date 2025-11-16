@@ -180,8 +180,11 @@ def microtask(job_id: str, signal=Event()) -> None:
                 app.fetch_images_progress = 100
                 save_metadata(app)
                 if not signal.is_set():
-                    logger.info('Fetch content completed')
-                    job.run_state = RunState.CREATING_ARTIFACTS
+                    logger.info('Fetch content completed. Job finished.')
+                    job.progress = 100
+                    job.status = JobStatus.COMPLETED
+                    job.run_state = RunState.SUCCESS
+                    return save()
 
             job.progress = round(app.progress)
             return save()

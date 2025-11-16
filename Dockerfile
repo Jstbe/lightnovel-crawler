@@ -13,10 +13,6 @@ RUN apt-get update -yq \
     && apt-get autoremove -yq \
     && rm -rf /var/lib/apt/lists/*
 
-# Install calibre
-RUN wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin \
-    && ln -s /opt/calibre/ebook-convert /usr/local/bin/ebook-convert
-
 # Add app user
 RUN useradd -ms /bin/bash lncrawl
 USER lncrawl
