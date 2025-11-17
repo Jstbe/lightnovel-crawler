@@ -110,7 +110,7 @@ export const NovelDetailsPage: React.FC<any> = () => {
   return (
     <Space direction="vertical" size={lg ? 'large' : 'small'}>
       {contextHolder}
-      <NovelDetailsCard novel={novel} />
+      <NovelDetailsCard novel={novel} messageApi={messageApi} />
       <ArtifactListCard artifacts={artifacts} />
       <NovelTableOfContentsCard toc={volumes} />
     </Space>

@@ -7,7 +7,7 @@ import {
   type User,
 } from '@/types';
 import { stringifyError } from '@/utils/errors';
-import { Button, Flex, Grid, Result, Space, Spin } from 'antd';
+import { Button, Flex, Grid, Result, Space, Spin, message } from 'antd';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -19,6 +19,9 @@ import { JobDetailsCard } from './JobDetailsCard';
 export const JobDetailsPage: React.FC<any> = () => {
   const { lg } = Grid.useBreakpoint();
   const { id } = useParams<{ id: string }>();
+
+  const [messageApi, contextHolder] = message.useMessage();
+  void contextHolder;
 
   const [refreshId, setRefreshId] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -95,7 +98,7 @@ export const JobDetailsPage: React.FC<any> = () => {
     <Space direction="vertical" size={lg ? 'large' : 'small'}>
       <JobDetailsCard job={job} />
       <UserDetailsCard user={user} />
-      <NovelDetailsCard novel={novel} />
+      <NovelDetailsCard novel={novel} messageApi={messageApi} />
       <ArtifactListCard artifacts={artifacts} />
     </Space>
   );
