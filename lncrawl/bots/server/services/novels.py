@@ -1,3 +1,6 @@
+import os.path
+import shutil
+import logging
 from typing import Any, List
 
 from sqlmodel import and_, desc, func, not_, select
@@ -8,6 +11,7 @@ from ..models.novel import Artifact, Novel
 from ..models.pagination import Paginated
 from ..models.user import User, UserRole
 
+logger = logging.getLogger(__name__)
 
 NOVEL_TITLE_COLUMN = Novel.__table__.c.title
 
@@ -70,6 +74,15 @@ class NovelService:
     def delete(self, novel_id: str, user: User) -> bool:
         if user.role != UserRole.ADMIN:
             raise AppErrors.forbidden
+
+        try:
+            novel_path = self._ctx.metadata.resolve_output_path(novel_id)
+            if os.path.exists(novel_path):
+                shutil.rmtree(novel_path)
+                logger.info(f'Deleted novel files at: {novel_path}')
+        except Exception as e:
+            logger.error(f'Failed to delete novel files: {e}')
+
         with self._db.session() as sess:
             novel = sess.get(Novel, novel_id)
             if not novel:
