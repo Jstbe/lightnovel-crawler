@@ -13,7 +13,7 @@ from .exeptions import LNException
 
 logger = logging.getLogger(__name__)
 
-MAX_REQUESTS_PER_DOMAIN = 5
+MAX_REQUESTS_PER_DOMAIN = int(os.getenv("MAX_REQUESTS_PER_DOMAIN", 5))
 
 _resolver = Semaphore(1)
 _host_semaphores: Dict[str, Semaphore] = {}
