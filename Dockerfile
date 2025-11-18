@@ -48,6 +48,7 @@ RUN pip install -r requirements.txt
 # Copy sources
 COPY sources sources
 COPY lncrawl lncrawl
+COPY custom-sources custom-sources
 
 # Copy web assets
 COPY --from=node --chown=lncrawl:lncrawl /app/lncrawl/bots/server/web lncrawl/bots/server/web
