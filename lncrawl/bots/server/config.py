@@ -84,6 +84,11 @@ class App:
         '''time (seconds) to sleep before starting next job'''
         return int(env('SCHEDULER_RESET_INTERVAL_IN_SECONDS', 6 * 3600))
 
+    @cached_property
+    def idle_restart_threshold(self) -> int:
+        '''time (seconds) of idleness before restarting the server to save memory because there is a ram leak in the main app'''
+        return int(env('IDLE_RESTART_THRESHOLD_IN_SECONDS', 5 * 60))
+
 
 class Mail:
     @cached_property

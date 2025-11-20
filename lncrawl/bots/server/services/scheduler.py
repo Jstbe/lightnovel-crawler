@@ -1,9 +1,11 @@
 import logging
+import os
+import signal as sig
 from collections import deque
 from threading import Event, Thread
 from typing import Deque, Dict, Optional
 
-from sqlmodel import asc, desc, or_, select
+from sqlmodel import asc, desc, or_, select, func
 
 from ..context import ServerContext
 from ..models.job import Job, JobRunnerHistoryItem, JobStatus, RunState
@@ -25,6 +27,8 @@ class JobScheduler:
         self.signal: Optional[Event] = None
         self.threads: Dict[str, Thread] = {}
         self.history: Deque[JobRunnerHistoryItem] = deque(maxlen=50)
+        self.idle_since_ts: int = 0
+        self.has_run_jobs: bool = False
 
     def close(self):
         self.stop()
@@ -66,6 +70,10 @@ class JobScheduler:
                 self.__add_cleaner(signal)
                 if len(self.threads) < CONCURRENCY:
                     self.__add_job(signal)
+
+                # check for idleness
+                self.__check_idle_and_restart(signal)
+
                 if current_timestamp() - self.start_ts > reset_interval:
                     pending_restart = True
                     self.stop()
@@ -76,15 +84,52 @@ class JobScheduler:
             if pending_restart:
                 self.start()
 
+    def __check_idle_and_restart(self, signal=Event()):
+        # Do not restart if the worker has neever run any jobs
+        if not self.has_run_jobs:
+            return
+
+        # Do not restart if there are active threads
+        if len(self.threads) > 0:
+            self.idle_since_ts = 0  # reset idle timer
+            return
+
+        # Do not restart if there are pending jobs
+        with self.db.session() as sess:
+            stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.PENDING)
+            pending_jobs = sess.exec(stmt).one()
+        if pending_jobs > 0:
+            self.idle_since_ts = 0  # reset idle timer
+            return
+
+        # If we are here, the worker is idle
+        logger.debug("Scheduler is idle. No actrive or pending jobs.")
+        if self.idle_since_ts == 0:
+            self.idle_since_ts = current_timestamp()
+            return
+
+        # check if idle time exceeds threshold
+        cfg = self.ctx.config.app
+        idle_duration_ms = current_timestamp() - self.idle_since_ts
+        restart_threshold_ms = cfg.idle_restart_threshold * 1000
+
+        if idle_duration_ms > restart_threshold_ms:
+            logger.info(f"Scheduler has been iddle for {idle_duration_ms // 1000}s. Restarting to free memory.")
+            signal.set()  # stop the scheduler
+            os.kill(1, sig.SIGTERM)  # restart the whole server process
+
     def __free(self):
-        logger.debug("Waiting for queue to be free")
-        # wait for any job to finish
-        for k, t in self.threads.items():
-            t.join(1)  # wait 1s for this job
-            if not t.is_alive():  # if done
-                # remove from queue and exit loop
-                del self.threads[k]
-                break
+        logger.debug("Cleaning up finished job threads")
+        threads_to_remove = []
+        # Iterate over a copy to allow safe modification
+        for key, thread in list(self.threads.items()):
+            if not thread.is_alive():
+                threads_to_remove.append(key)
+
+        # remove all collected dead threads in a separate loop
+        for key in threads_to_remove:
+            del self.threads[key]
+            logger.debug(f"Removed finished thread for job: {key}")
 
     def __add_job(self, signal=Event()):
         logger.debug("Running new task")
@@ -126,6 +171,9 @@ class JobScheduler:
                 # but continue processing pending jobs to detect duplicates
                 if len(self.threads) >= CONCURRENCY:
                     continue
+
+                # mark as it executed at least one job
+                self.has_run_jobs = True
 
                 # create and start threads
                 t = Thread(
