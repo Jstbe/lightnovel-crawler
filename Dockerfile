@@ -57,4 +57,4 @@ COPY --from=node --chown=lncrawl:lncrawl /app/lncrawl/bots/server/web lncrawl/bo
 ENV OUTPUT_PATH=/home/lncrawl/output
 RUN mkdir -p $OUTPUT_PATH
 
-ENTRYPOINT [ "python", "-m", "lncrawl" ]
+#ENTRYPOINT [ "python", "-m", "lncrawl" ] # not needed as we use CMD in docker-compose.yml
