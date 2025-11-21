@@ -67,6 +67,27 @@ class NovelFireCrawler(Crawler):
         self.novel_author = soup.select_one('span[itemprop="author"]').text.strip()
         img = soup.select_one(".cover img")
         self.novel_cover = self.absolute_url(img["data-src"])
+        tags = [tag.text.strip() for tag in soup.select("a.tag")]
+        if tags:
+            self.novel_tags = tags
+        else:
+            # Fallback to meta keywords if no tags found
+            meta_keywords = soup.select_one('meta[itemprop="keywords"]')
+            if meta_keywords and meta_keywords.get("content"):
+                self.novel_tags = [tag.strip() for tag in meta_keywords["content"].split(",")]
+            else:
+                self.novel_tags = []
+        self.novel_synopsis = soup.select_one('meta[itemprop="description"]')
+        if self.novel_synopsis:
+            self.novel_synopsis = self.novel_synopsis["content"].strip()
+        else:
+            # Fallback to div.summary if meta tab is not found
+            self.novel_synopsis = soup.select_one("div.summary .content")
+            if self.novel_synopsis:
+                paragraphs = self.novel_synopsis.find_all("p", recursive=False)
+                self.novel_synopsis = "\n".join(p.text.strip() for p in paragraphs).strip()
+            else:
+                self.novel_synopsis = ""
 
         source_meta, source_meta_file = self._get_source_meta_data_and_file_path()
 
