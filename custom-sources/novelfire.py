@@ -65,7 +65,6 @@ class NovelFireCrawler(Crawler):
 
         self.novel_title = soup.find("h1").text.strip().title()
         self.novel_author = soup.select_one('span[itemprop="author"]').text.strip()
-
         img = soup.select_one(".cover img")
         self.novel_cover = self.absolute_url(img["data-src"])
 
@@ -84,23 +83,43 @@ class NovelFireCrawler(Crawler):
                 logger.info(f"last full scan was over {FULL_SCAN_INTERVAL_DAYS} days ago, forcing full scan.")
 
         # Determine starting URL
-        start_url = self.novel_url + "/chapters"  # Default to first page
         if not force_full_scan:
-            last_page = source_meta.get("last_chapter_url")
-            if last_page:
-                start_url = last_page
-                logger.info(f"Starting incremental scan from last known page: {start_url}")
+            logger.info("Attempting to load chapter list from meta.json for incremental scan.")
+            # Manually construct the path to the main meta.json file
+            host = urlparse(self.novel_url).netloc
+            good_file_name = slugify(self.novel_title, max_length=50, separator=" ", lowercase=False, word_boundary=True)
+            output_path = Path(C.DEFAULT_OUTPUT_PATH) / slugify(host.replace('www.', '')) / good_file_name
+            main_meta_file = output_path / C.META_FILE_NAME
+            logger.info(f"Looking for main meta.json at '{main_meta_file}'")
 
-        # Preserve existing chapters
-        # Create a set uf URLs from chapters alread loaded by the App for fast checking.
-        # This prevents adding duplicates and ensures we only append new content.
+            if main_meta_file.exists():
+                try:
+                    raw_meta_dict = json.loads(main_meta_file.read_text(encoding="utf-8"))
+                    # check if necessary keys exist
+                    if "novel" in raw_meta_dict and "chapters" in raw_meta_dict["novel"] and 'volumes' in raw_meta_dict["novel"]:
+                        self.chapters = raw_meta_dict["novel"]["chapters"]
+                        self.volumes = raw_meta_dict["novel"]["volumes"]
+                        logger.info(f"Succesfully loaded {len(self.chapters)} chapters and {len(self.volumes)} volumes from main meta.json")
+                    else:
+                        raise KeyError("Required keys (novel, chapters, volumes) not found in meta.json")
+                except Exception as e:
+                    logger.warning(f"Failed to load chapters from main meta.json, forcing full scan. Error: {e}")
+                    force_full_scan = True
+
+        if force_full_scan:
+            logger.info("Performing a full chapter list scan from the website...")
+            self.chapters = []
+            self.volumes = []
+
         existing_chapter_urls = {chapter["url"] for chapter in self.chapters}
+        logger.info(f"Starting scan with {len(existing_chapter_urls)} existing chapters.")
 
-        # Determine the starting volume ID
+        start_url = self.novel_url + "/chapters"  # Default to first page
         current_vol_id = 1
         if not force_full_scan and self.chapters:
-            # Start with the volume iD of the last known chapter
+            start_url = source_meta.get("last_chapter_url", start_url)
             current_vol_id = self.chapters[-1]["volume"]
+            logger.info(f"Starting incremental scan from last known page: {start_url}")
 
         # Pagination loop
         page_url = start_url
@@ -112,8 +131,7 @@ class NovelFireCrawler(Crawler):
             soup = self.get_soup(self.absolute_url(page_url))
             chapters_on_page = soup.select("ul.chapter-list li a")
 
-            # Set the last known page URL in source_meta
-            source_meta["last_chapter_url"] = page_url
+            source_meta["last_chapter_url"] = page_url  # Update last chapter URL in metadata
 
             for a in chapters_on_page:
                 chapter_url = self.absolute_url(a["href"])
@@ -122,8 +140,9 @@ class NovelFireCrawler(Crawler):
 
                 # New chapter found
                 new_chapters_found = True
+                chapter_id = len(self.chapters) + 1
                 self.chapters.append({
-                    "id": len(self.chapters) + 1,
+                    "id": chapter_id,
                     "volume": current_vol_id,
                     "title": a["title"],
                     "url": chapter_url,
@@ -134,8 +153,7 @@ class NovelFireCrawler(Crawler):
             next_page_link = soup.select_one("a.page-link[rel='next']")
             if next_page_link:
                 page_url = self.absolute_url(next_page_link['href'])
-                if new_chapters_found:
-                    current_vol_id += 1  # Increment volume ID for next set of chapters
+                current_vol_id += 1  # Increment volume ID for next set of chapters
             else:
                 page_url = None  # No more pages to process
 
@@ -149,15 +167,6 @@ class NovelFireCrawler(Crawler):
                 logger.info(f"Saved source-specific metadata to {source_meta_file}")
             except Exception as e:
                 logger.warning(f"Failed to save source-specific metadata: {e}")
-
-        # Rebuild self.volumes from the final chapter list
-        if self.chapters:
-            all_volume_ids = sorted(list({c['volume'] for c in self.chapters}))
-            self.volumes = [{"id": vol_id} for vol_id in all_volume_ids]
-        else:
-            self.volumes = []
-
-        logger.debug(f"Final volume count: {len(self.volumes)}")
 
     def download_chapter_body(self, chapter) -> str:
         soup = self.get_soup(chapter["url"])
