@@ -278,7 +278,9 @@ class JobScheduler:
                     
                     # Update next_run
                     try:
-                        iter = croniter(cron_expr, datetime.fromtimestamp(now_ts, timezone.utc))
+                        local_tz = datetime.now().astimezone().tzinfo
+                        now_local = datetime.fromtimestamp(now_ts, local_tz)
+                        iter = croniter(cron_expr, now_local)
                         next_run = iter.get_next(float)
                         logger.info(f"Novel {novel.id}: Updating next_run to {next_run}")
                         

@@ -113,6 +113,13 @@ class NovelService:
 
             # Update schedule config
             novel.extra = dict(novel.extra)
+            
+            # Set next_run to None to trigger immediate run if enabled
+            if schedule_config.get('enabled'):
+                schedule_config['next_run'] = None
+            else:
+                schedule_config['next_run'] = None
+
             novel.extra['schedule'] = schedule_config
 
             sess.add(novel)
