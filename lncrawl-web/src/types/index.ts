@@ -45,7 +45,9 @@ export interface Novel {
   tags: string[];
   volume_count: number;
   chapter_count: number;
+  extra?: Record<string, any>;
 }
+
 
 export interface Job {
   id: string;

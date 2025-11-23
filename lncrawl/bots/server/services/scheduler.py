@@ -9,6 +9,12 @@ from sqlmodel import asc, desc, or_, select, func
 
 from ..context import ServerContext
 from ..models.job import Job, JobRunnerHistoryItem, JobStatus, RunState
+from ..models.novel import Novel
+from ..models.user import User
+from ..models.enums import JobPriority
+from croniter import croniter
+from datetime import datetime
+
 from ..utils.time_utils import current_timestamp
 from .cleaner import microtask as cleaner_task
 from .runner import microtask
@@ -28,6 +34,8 @@ class JobScheduler:
         self.threads: Dict[str, Thread] = {}
         self.history: Deque[JobRunnerHistoryItem] = deque(maxlen=50)
         self.idle_since_ts: int = 0
+        self.last_schedule_check_ts: int = 0
+
         self.has_run_jobs: bool = False
 
     def close(self):
@@ -68,6 +76,8 @@ class JobScheduler:
                     return
                 self.__free()
                 self.__add_cleaner(signal)
+                self.__check_schedules(signal)
+
                 if len(self.threads) < CONCURRENCY:
                     self.__add_job(signal)
 
@@ -214,3 +224,64 @@ class JobScheduler:
         )
         t.start()
         self.threads["cleaner"] = t
+
+    def __check_schedules(self, signal=Event()):
+        # Run every minute
+        if current_timestamp() - self.last_schedule_check_ts < 60 * 1000:
+            return
+        self.last_schedule_check_ts = current_timestamp()
+
+        logger.debug("Checking schedules")
+        with self.db.session() as sess:
+            novels = sess.exec(select(Novel)).all()
+            for novel in novels:
+                if not novel.extra:
+                    continue
+                
+                schedule = novel.extra.get('schedule')
+                if not schedule or not schedule.get('enabled'):
+                    continue
+                
+                cron_expr = schedule.get('cron')
+                if not cron_expr:
+                    continue
+                
+                next_run_ts = schedule.get('next_run')
+                now_ts = current_timestamp() / 1000 # seconds
+                
+                should_run = False
+                if not next_run_ts:
+                    should_run = True
+                elif next_run_ts <= now_ts:
+                    should_run = True
+                
+                if should_run:
+                    logger.info(f"Scheduled job triggered for novel: {novel.title}")
+                    
+                    # Get a user for the job (use the first available user)
+                    user = sess.exec(select(User)).first()
+                    if not user:
+                        logger.warning("No user found to assign scheduled job")
+                        continue
+
+                    # Create job
+                    job = Job(
+                        user_id=user.id,
+                        novel_id=novel.id,
+                        url=novel.url,
+                        priority=JobPriority.LOW,
+                    )
+                    sess.add(job)
+                    
+                    # Update next_run
+                    try:
+                        iter = croniter(cron_expr, datetime.fromtimestamp(now_ts))
+                        next_run = iter.get_next(float)
+                        schedule['next_run'] = next_run
+                        novel.extra = dict(novel.extra)
+                        novel.extra['schedule'] = schedule
+                        sess.add(novel)
+                        
+                        sess.commit()
+                    except Exception as e:
+                        logger.error(f"Failed to schedule novel {novel.id}: {e}")

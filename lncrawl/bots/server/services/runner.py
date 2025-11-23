@@ -93,6 +93,11 @@ def microtask(job_id: str, signal=Event()) -> None:
             return save()
 
         crawler.scraper.signal = signal  # type:ignore
+        
+        # Inject schedule config
+        if novel.extra and 'schedule' in novel.extra:
+            crawler.schedule_config = novel.extra['schedule']
+
 
         #
         # State: FETCHING_NOVEL

@@ -7,7 +7,10 @@ import { useParams } from 'react-router-dom';
 import { ArtifactListCard } from '../../components/ArtifactList/ArtifactListCard';
 import { NovelDetailsCard } from './NovelDetailsCard';
 import { NovelTableOfContentsCard } from './NovelChapterListCard';
+import { SchedulingCard } from './SchedulingCard';
+
 import { getChapterReadStatus } from '../NovelReaderPage/readStatus';
+
 
 export const NovelDetailsPage: React.FC<any> = () => {
   const { id } = useParams<{ id: string }>();
@@ -111,8 +114,10 @@ export const NovelDetailsPage: React.FC<any> = () => {
     <Space direction="vertical" size={lg ? 'large' : 'small'}>
       {contextHolder}
       <NovelDetailsCard novel={novel} messageApi={messageApi} />
+      <SchedulingCard novel={novel} />
       <ArtifactListCard artifacts={artifacts} />
       <NovelTableOfContentsCard toc={volumes} />
+
     </Space>
   );
 };

@@ -79,3 +79,13 @@ def delete_novel(
     user: User = Security(ensure_user)
 ) -> bool:
     return ctx.novels.delete(novel_id, user)
+
+
+@router.put("/{novel_id}/schedule", summary='Updates novel schedule', dependencies=[Security(ensure_user)])
+def update_schedule(
+    schedule_config: dict,
+    novel_id: str = Path(),
+    ctx: ServerContext = Depends(),
+) -> Novel:
+    return ctx.novels.update_schedule(novel_id, schedule_config)
+

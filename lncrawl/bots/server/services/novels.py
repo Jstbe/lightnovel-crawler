@@ -100,3 +100,23 @@ class NovelService:
                 select(Artifact).where(Artifact.novel_id == novel.id)
             ).all()
             return list(artifacts)
+
+    def update_schedule(self, novel_id: str, schedule_config: dict) -> Novel:
+        with self._db.session() as sess:
+            novel = sess.get(Novel, novel_id)
+            if not novel:
+                raise AppErrors.no_such_novel
+
+            # Ensure extra is a dict
+            if not novel.extra:
+                novel.extra = {}
+
+            # Update schedule config
+            novel.extra = dict(novel.extra)
+            novel.extra['schedule'] = schedule_config
+
+            sess.add(novel)
+            sess.commit()
+            sess.refresh(novel)
+            return novel
+

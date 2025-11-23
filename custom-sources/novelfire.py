@@ -99,9 +99,16 @@ class NovelFireCrawler(Crawler):
             logger.info("No 'last_full_scan_date' found, forcing full scan.")
         else:
             last_scan_date = datetime.fromisoformat(last_full_scan_str)
-            if datetime.now() - last_scan_date > timedelta(days=FULL_SCAN_INTERVAL_DAYS):
+            
+            # Use configured interval or default
+            interval_days = FULL_SCAN_INTERVAL_DAYS
+            if hasattr(self, 'schedule_config') and self.schedule_config:
+                interval_days = int(self.schedule_config.get('full_scan_interval_days', FULL_SCAN_INTERVAL_DAYS))
+            
+            if datetime.now() - last_scan_date > timedelta(days=interval_days):
                 force_full_scan = True
-                logger.info(f"last full scan was over {FULL_SCAN_INTERVAL_DAYS} days ago, forcing full scan.")
+                logger.info(f"last full scan was over {interval_days} days ago, forcing full scan.")
+
 
         # Determine starting URL
         if not force_full_scan:

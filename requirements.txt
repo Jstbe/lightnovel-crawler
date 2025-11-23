@@ -64,3 +64,5 @@ types-passlib
 types-python-jose
 types-setuptools
 lxml-stubs
+croniter
+
