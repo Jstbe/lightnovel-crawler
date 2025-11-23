@@ -19,7 +19,7 @@ def list_novels(
     ctx: ServerContext = Depends(),
     search: str = Query(default=''),
     offset: int = Query(default=0),
-    limit: int = Query(default=20, le=100),
+    limit: int = Query(default=20, le=1000),
     with_orphans: bool = Query(default=False),
 ) -> Paginated[Novel]:
     return ctx.novels.list(

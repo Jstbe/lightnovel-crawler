@@ -4,7 +4,9 @@ import {
   DeploymentUnitOutlined,
   FileDoneOutlined,
   TeamOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
+
 import { type MenuProps } from 'antd';
 import { UserInfoCard } from './UserInfo';
 
@@ -31,7 +33,13 @@ export const buildMenu = (isAdmin: boolean): MenuProps['items'] => [
     icon: <BookOutlined />,
   },
   {
+    key: '/schedules',
+    label: 'Schedules',
+    icon: <CalendarOutlined />,
+  },
+  {
     type: 'divider',
+
   },
   {
     key: '/meta/sources',

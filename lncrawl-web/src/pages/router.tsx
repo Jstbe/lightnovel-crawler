@@ -14,6 +14,8 @@ import { UserListPage } from './UserList';
 import { UserProfilePage } from './UserProfilePage';
 import { ForgotPasswordPage } from './ForgotPassword';
 import { ResetPasswordPage } from './ResetPassword';
+import { SchedulesPage } from './Schedules';
+
 
 export const AUTH_ROUTES: RouteObject[] = [
   {
@@ -73,7 +75,12 @@ export const USER_ROUTES: RouteObject[] = [
         element: <NovelReaderPage />,
       },
       {
+        path: 'schedules',
+        element: <SchedulesPage />,
+      },
+      {
         path: 'meta',
+
         children: [
           {
             path: 'sources',
