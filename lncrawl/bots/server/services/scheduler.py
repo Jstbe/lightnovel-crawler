@@ -13,7 +13,7 @@ from ..models.novel import Novel
 from ..models.user import User
 from ..models.enums import JobPriority
 from croniter import croniter
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..utils.time_utils import current_timestamp
 from .cleaner import microtask as cleaner_task
@@ -252,10 +252,13 @@ class JobScheduler:
                 should_run = False
                 if not next_run_ts:
                     should_run = True
+                    logger.debug(f"Novel {novel.id}: First run (next_run_ts is None)")
                 elif next_run_ts <= now_ts:
                     should_run = True
+                    logger.debug(f"Novel {novel.id}: Due run (next_run_ts {next_run_ts} <= now_ts {now_ts})")
                 
                 if should_run:
+
                     logger.info(f"Scheduled job triggered for novel: {novel.title}")
                     
                     # Get a user for the job (use the first available user)
@@ -275,13 +278,18 @@ class JobScheduler:
                     
                     # Update next_run
                     try:
-                        iter = croniter(cron_expr, datetime.fromtimestamp(now_ts))
+                        iter = croniter(cron_expr, datetime.fromtimestamp(now_ts, timezone.utc))
                         next_run = iter.get_next(float)
-                        schedule['next_run'] = next_run
-                        novel.extra = dict(novel.extra)
-                        novel.extra['schedule'] = schedule
-                        sess.add(novel)
+                        logger.info(f"Novel {novel.id}: Updating next_run to {next_run}")
                         
+                        # Create a deep copy or new dict to ensure SQLAlchemy detects change
+                        new_extra = dict(novel.extra)
+                        new_schedule = dict(schedule)
+                        new_schedule['next_run'] = next_run
+                        new_extra['schedule'] = new_schedule
+                        novel.extra = new_extra
+                        
+                        sess.add(novel)
                         sess.commit()
                     except Exception as e:
                         logger.error(f"Failed to schedule novel {novel.id}: {e}")
